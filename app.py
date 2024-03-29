@@ -41,6 +41,8 @@ st.write('''
     Let's try to answer the first question.
     ''')
 
+
+
 st.subheader("How effective is the test preparation course?")
 st.write('''
     We will analyze each subject score with only 'test preparation course' as the grouping variable. 
@@ -51,7 +53,6 @@ st.write('''
     ''')
 st.latex(r'''H_0 : \mu_A - \mu_B = 0''')
 st.latex(r'''H_1 : \mu_A - \mu_B \not = 0''')
-
 
 st.write('''
     Focus on math score in each group then we will get this summary.
@@ -97,8 +98,9 @@ with col3:
     st.write('${s_i}$ = sample standard deviation of Group ${i}$')
 
 st.write('''
-    From the boxplot, assuming the two independent samples are drawn from populations with unequal variances 
-    (${{\sigma_A}^2 ≠ {\sigma_B}^2}$), the test statistic ${t}$ is computed as:
+    From the boxplot, we can see the comparation of data distribution in two groups. Assuming 
+    the two independent samples are drawn from populations with unequal variances 
+    (${{\sigma_A}^2 ≠ {\sigma_B}^2}$), then the test statistic ${t}$ is computed as:
     ''')
 st.latex(r'''
     t = \frac{\overline{x}_A - \overline{x}_B}{\sqrt{\frac{{s_A}^2}{n_A} + \frac{{s_B}^2}{n_B}}}
@@ -125,7 +127,6 @@ with col1:
 with col2:
     st.write('${df}$ = ', df)
 
-
 st.write('''
     Choose the confindence level of 5% (two tails) and with the ${df}$ calculated, critical ${t}$ value will be 
     ''')
@@ -143,7 +144,6 @@ st.write('''
 
     Now let's use the same method to evaluate the reading score and writing score of two groups.
     ''')
-
 
 ## Boxplot
 box1 = alt.Chart(dataset).mark_boxplot(size=50, extent=0.5).encode(
@@ -174,7 +174,6 @@ fig = (box1).configure_axis(
             height=250
         )
 st.altair_chart(fig)
-
 
 col1, col2 = st.columns(2)
 with col1:
@@ -237,6 +236,66 @@ st.write('''
     format(xab_reading, ".2%"),
     ''' higher reading score mean and ''',
     format(xab_writing, ".2%"),
-    ''' 
-    higher writing score mean than Group B. In conclusion, there is difference in all subject score between Group A and Group B.
+    ''' higher writing score mean than Group B. In conclusion, there is difference in all subject score between Group A and Group B.
+    ''')
+
+
+
+st.subheader("Which major factors contribute to test outcomes?")
+st.write('''
+    Let's assume all factors (gender, race/ethnicity, parental level of education, lunch, and test preparation course) 
+    have an interaction effects on subject score. We will find what factor that has the most contribution on the score. 
+    In Machine Learning term, it is called by Feature (variable) importance.
+         
+    Feature (variable) importance indicates how much each feature (variabel) contributes to the model prediction. 
+    Basically, it determines the degree of usefulness of a specific variable for a current model and prediction. 
+    In this case, we want to predict the subject score based on the all factors.
+         
+    Based on the dataset, we will use Linear Regression method to predict the each subject score with all factors. 
+    Let's start with predict the math score. First, we need to convert all factors value to numerical so they can 
+    be computed in the model.
+    ''')
+
+col1, col2 = st.columns(2)
+with col1:
+    df = pd.DataFrame(dataset['gender'].unique())
+    df = df.rename(columns={0: "gender"})
+    df = df.sort_values(by='gender', ascending=True)
+    df['gender_convert'] = np.arange(df.shape[0])+1
+    st.table(df)
+    dataset_join = pd.merge(dataset, df, how='left', on='gender')
+    
+    df = pd.DataFrame(dataset['race/ethnicity'].unique())
+    df = df.rename(columns={0: "race/ethnicity"})
+    df = df.sort_values(by='race/ethnicity', ascending=True)
+    df['race/ethnicity_convert'] = np.arange(df.shape[0])+1
+    st.table(df)
+    dataset_join = pd.merge(dataset_join, df, how='left', on='race/ethnicity')
+
+    df = pd.DataFrame(dataset['lunch'].unique())
+    df = df.rename(columns={0: "lunch"})
+    df = df.sort_values(by='lunch', ascending=True)
+    df['lunch_convert'] = np.arange(df.shape[0])+1
+    st.table(df)
+    dataset_join = pd.merge(dataset_join, df, how='left', on='lunch')
+with col2:
+    df = pd.DataFrame(dataset['parental level of education'].unique())
+    df = df.rename(columns={0: "parental level of education"})
+    df = df.sort_values(by='parental level of education', ascending=True)
+    df['parental level of education_convert'] = np.arange(df.shape[0])+1
+    st.table(df)
+    dataset_join = pd.merge(dataset_join, df, how='left', on='parental level of education')
+
+    df = pd.DataFrame(dataset['test preparation course'].unique())
+    df = df.rename(columns={0: "test preparation course"})
+    df = df.sort_values(by='test preparation course', ascending=True)
+    df['test preparation course_convert'] = np.arange(df.shape[0])+1
+    st.table(df)
+    dataset_join = pd.merge(dataset_join, df, how='left', on='test preparation course')
+
+st.write('''Table to be (sample data) :''')
+st.table(dataset_join.head(10))
+
+st.write('''
+    Train the model using this dataset so we will get this equation as the perdiction model.
     ''')
