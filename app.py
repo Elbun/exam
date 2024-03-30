@@ -6,7 +6,10 @@ import altair as alt
 import streamlit as st
 import matplotlib.pyplot as plt
 import scipy
-import math
+import math 
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
 
 
 # Get the data
@@ -245,57 +248,81 @@ st.subheader("Which major factors contribute to test outcomes?")
 st.write('''
     Let's assume all factors (gender, race/ethnicity, parental level of education, lunch, and test preparation course) 
     have an interaction effects on subject score. We will find what factor that has the most contribution on the score. 
-    In Machine Learning term, it is called by Feature (variable) importance.
+    In Machine Learning term, it is called by Feature (Variable) Importance.
          
     Feature (variable) importance indicates how much each feature (variabel) contributes to the model prediction. 
     Basically, it determines the degree of usefulness of a specific variable for a current model and prediction. 
     In this case, we want to predict the subject score based on the all factors.
          
     Based on the dataset, we will use Linear Regression method to predict the each subject score with all factors. 
-    Let's start with predict the math score. First, we need to convert all factors value to numerical so they can 
-    be computed in the model.
+    Let's start with predict the math score. All factors will be grouped as ${X}$ (independent variables) and the math score 
+    will be grouped as ${y}$ (dependent variable). First, we need to convert all factors value to dummy data so they can 
+    be computed in the model. 
     ''')
 
-col1, col2 = st.columns(2)
-with col1:
-    df = pd.DataFrame(dataset['gender'].unique())
-    df = df.rename(columns={0: "gender"})
-    df = df.sort_values(by='gender', ascending=True)
-    df['gender_convert'] = np.arange(df.shape[0])+1
-    st.table(df)
-    dataset_join = pd.merge(dataset, df, how='left', on='gender')
-    
-    df = pd.DataFrame(dataset['race/ethnicity'].unique())
-    df = df.rename(columns={0: "race/ethnicity"})
-    df = df.sort_values(by='race/ethnicity', ascending=True)
-    df['race/ethnicity_convert'] = np.arange(df.shape[0])+1
-    st.table(df)
-    dataset_join = pd.merge(dataset_join, df, how='left', on='race/ethnicity')
+# Regression to predict math score
+st.write('''
+    Factors dummy variable is in form of 0 and 1, which is easy to interpret for the regression model.
+    One value of each factor will be excluded to simplify the model training process. For example, in gender there are 
+    two unique values, male and female. In creating dummy variable, the female will be exclude so there will remain male dummy
+    variable. This way is also applied for the other variables.
+    ''')
+X = dataset[['gender','race/ethnicity','parental level of education','lunch','test preparation course']]
+X = pd.get_dummies(data=X, drop_first=True)
+X = X.astype(int)
+Y = dataset['math score']
+st.table(X.head())
 
-    df = pd.DataFrame(dataset['lunch'].unique())
-    df = df.rename(columns={0: "lunch"})
-    df = df.sort_values(by='lunch', ascending=True)
-    df['lunch_convert'] = np.arange(df.shape[0])+1
-    st.table(df)
-    dataset_join = pd.merge(dataset_join, df, how='left', on='lunch')
-with col2:
-    df = pd.DataFrame(dataset['parental level of education'].unique())
-    df = df.rename(columns={0: "parental level of education"})
-    df = df.sort_values(by='parental level of education', ascending=True)
-    df['parental level of education_convert'] = np.arange(df.shape[0])+1
-    st.table(df)
-    dataset_join = pd.merge(dataset_join, df, how='left', on='parental level of education')
-
-    df = pd.DataFrame(dataset['test preparation course'].unique())
-    df = df.rename(columns={0: "test preparation course"})
-    df = df.sort_values(by='test preparation course', ascending=True)
-    df['test preparation course_convert'] = np.arange(df.shape[0])+1
-    st.table(df)
-    dataset_join = pd.merge(dataset_join, df, how='left', on='test preparation course')
-
-st.write('''Table to be (sample data) :''')
-st.table(dataset_join.head(10))
 
 st.write('''
-    Train the model using this dataset so we will get this equation as the perdiction model.
+    We will split the dataset into train dataset and test dataset. The train data set is used to train the prediction model.
+    The test dataset will be used to evaluate the prediction output. The dataset will be splitted 80:20 for train and test
+    dataset. The size of each dataset is shown as below.
     ''')
+X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, random_state=101)
+col1, col2 = st.columns(2)
+with col1:
+    st.write('${X_{train}}$ = ', X_train.shape)
+    st.write('${X_{test}}$ = ', X_test.shape)
+with col2:
+    st.write('${y_{train}}$ = ', y_train.shape)
+    st.write('${y_{test}}$ = ', y_test.shape)
+
+st.write('''
+    Now we use ${X_{train}}$ and ${y_{train}}$ to train the linear regression model. After the model is built, one of parameters
+    we can find is intercept. Intercept is the value of ${y}$ where all ${X}$ values are zero.
+    ''')
+model = LinearRegression()
+model.fit(X_train,y_train)
+st.write('Intercept = ', model.intercept_)
+
+st.write('''
+    The other parameter we can find is coefficient. The sign of each coefficient indicates the direction of the relationship between 
+    a predictor variable (${X}$) and the response variable (${y}$). A positive sign indicates that as the predictor variable increases, 
+    the target variable also increases. A negative sign indicates that as the predictor variable increases, the target variable decreases.
+    ''')
+coeff_parameter = pd.DataFrame(model.coef_,X.columns,columns=['Coefficient'])
+st.table(coeff_parameter)
+
+st.write('''
+    After knowing the intercept and coefficient of each ${X}$, we can start to predict the math score from ${X_{test}}$ using equaition model.
+    Each predicted math score (${y_{pred}}$) is compared with the actual math score (${y_{test}}$) and then plotted in scatter chart.
+    ''')
+y_pred = model.predict(X_test)
+mse_label = mean_squared_error(y_test, y_pred)
+
+## Chart 
+df = pd.DataFrame({'y_test': y_test, 'y_pred': y_pred})
+scatter1 = alt.Chart(df).mark_point(size=20).encode(
+    x=alt.X("y_test:Q", title="y_test").scale(zero=True),
+    y=alt.Y("y_pred:Q", title="y_pred").scale(zero=True)
+    )
+final_plot = scatter1 + scatter1.transform_regression("y_test","y_pred").mark_line(color="red")
+fig = (final_plot).configure_axis(
+        labelFontSize=10
+    ).properties(
+        title=('Actual and Predicted Math Score Comparison'),
+        width=400,
+        height=400
+    )
+st.altair_chart(fig)
